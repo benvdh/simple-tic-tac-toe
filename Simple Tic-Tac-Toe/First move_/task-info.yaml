@@ -1,0 +1,227 @@
+type: edu
+custom_name: First move!
+files:
+- name: src/tictactoe/Main.java
+  visible: true
+  text: |
+    package tictactoe;
+
+    public class Main {
+        public static void main(String[] args) {
+            // write your code here
+        }
+    }
+  learner_created: false
+- name: src/tictactoe/Grid.java
+  visible: true
+  text: |
+    package tictactoe;
+
+    import java.util.ArrayList;
+    import java.util.List;
+
+    public class Grid {
+        private final String fieldsString;
+        private final char[][] grid;
+        private final List<List<FieldState>> fieldStateGrid;
+
+        Grid(String fieldsString) {
+            this.fieldsString = fieldsString;
+            this.grid = initGridArray();
+            this.fieldStateGrid = initFieldStateGrid();
+        }
+
+        public String[] getFormattedGrid() {
+            String[] formattedGrid = new String[5];
+            final String horizontalBoundary = "---------";
+
+            formattedGrid[0] = horizontalBoundary;
+
+            for (int i = 0, j = 1; i < fieldsString.length(); i+=3, j++) {
+                // replaceAll trick based on: https://stackoverflow.com/a/4470112/10243474
+                String row = new String(grid[j - 1]).replaceAll("\\B", " ");
+                formattedGrid[j] = String.format("| %s |", row);
+            }
+
+            formattedGrid[4] = horizontalBoundary;
+
+            return formattedGrid;
+        }
+
+        private char[][] initGridArray() {
+            char[][] gridArray = new char[3][3];
+
+            for (int i = 0, j = 0; i < fieldsString.length(); i+=3, j++) {
+                gridArray[j] = fieldsString.substring(i, i + 3).toCharArray();
+            }
+
+            return gridArray;
+        }
+
+        private List<List<FieldState>> initFieldStateGrid() {
+            List<List<FieldState>> fieldStateGrid = new ArrayList<>();
+
+            for (int j = 0; j < grid.length; j++) {
+                char[] row = grid[j];
+                fieldStateGrid.add(new ArrayList<>());
+
+                for (int i = 0; i < row.length; i++) {
+                    char fieldStateSymbol = row[i];
+
+                    fieldStateGrid
+                            .get(j)
+                            .add(i, FieldState.findBySymbol(fieldStateSymbol));
+                }
+            }
+
+            return fieldStateGrid;
+        }
+
+        public List<List<FieldState>> getTransposedFieldStateGrid() {
+            List<List<FieldState>> transposed = new ArrayList<>(fieldStateGrid.get(0).size());
+
+            // ensure we have all rows initialized beforehand, to prevent IndexOutOfBounds
+            for (int i = 0; i < fieldStateGrid.size(); i++) {
+                transposed.add(new ArrayList<>(fieldStateGrid.size()));
+            }
+
+            for (int i = 0; i < fieldStateGrid.size(); i++) {
+                List<FieldState> row = fieldStateGrid.get(i);
+
+                for (int j = 0; j < row.size(); j++) {
+                    transposed.get(j).add(i, row.get(j));
+                }
+            }
+
+            return transposed;
+        }
+
+        public String getFieldsString() {
+            return fieldsString;
+        }
+
+        public List<List<FieldState>> getFieldStateGrid() {
+            return fieldStateGrid;
+        }
+    }
+  learner_created: true
+- name: src/tictactoe/GridAnalyzer.java
+  visible: true
+  text: "package tictactoe;\n\nimport java.util.ArrayList;\nimport java.util.Arrays;\n\
+    import java.util.EnumSet;\nimport java.util.List;\n\npublic class GridAnalyzer\
+    \ {\n    final private Grid grid;\n    final private List<List<FieldState>> winningRowsResult;\n\
+    \    final private List<List<FieldState>> winningColumnsResult;\n    final private\
+    \ List<List<FieldState>> winningDiagonalsResult;\n\n    public GridAnalyzer(Grid\
+    \ grid) {\n        this.grid = grid;\n        this.winningRowsResult = detectWinningRows(grid.getFieldStateGrid());\n\
+    \        this.winningColumnsResult = detectWinningRows(grid.getTransposedFieldStateGrid());\n\
+    \        this.winningDiagonalsResult = detectWinningDiagonals();\n    }\n\n  \
+    \  public GridState analyze() {\n        List<List<List<FieldState>>> analysisResults\
+    \ = Arrays.asList(\n                winningRowsResult,\n                winningColumnsResult,\n\
+    \                winningDiagonalsResult\n        );\n\n        if (isGameInProgress()\
+    \ && !hasImpossibleState()) {\n            return GridState.GAME_NOT_FINISHED;\n\
+    \        }\n\n        if (hasImpossibleState()) {\n            return GridState.IMPOSSIBLE;\n\
+    \        }\n\n        if (isDraw()) {\n            return GridState.DRAW;\n  \
+    \      }\n\n        for (List<List<FieldState>> analysisResult : analysisResults)\
+    \ {\n            GridState winner = detectWinner(analysisResult);\n\n        \
+    \    if (winner != null) {\n                return winner;\n            }\n  \
+    \      }\n\n        return null;\n    }\n\n    private static GridState detectWinner(List<List<FieldState>>\
+    \ analysisResult) {\n        if (!analysisResult.isEmpty()) {\n            return\
+    \ GridState.getGridStateByFieldState(\n                    analysisResult.get(0).get(0)\n\
+    \            );\n        } else {\n            return null;\n        }\n    }\n\
+    \n    private static List<List<FieldState>> detectWinningRows(List<List<FieldState>>\
+    \ fieldStateGrid) {\n        List<List<FieldState>> winningRows = new ArrayList<>();\n\
+    \n        for (List<FieldState> row : fieldStateGrid) {\n            EnumSet<FieldState>\
+    \ uniqueValuesInRow = EnumSet.copyOf(row);\n\n            if (uniqueValuesInRow.size()\
+    \ == 1) {\n                winningRows.add(row);\n            }\n        }\n \
+    \       return winningRows;\n    }\n    \n    private List<List<FieldState>> detectWinningDiagonals()\
+    \ {\n        List<List<FieldState>> winningDiagonals = new ArrayList<>();\n  \
+    \      List<FieldState> forwardDiagonal = new ArrayList<>();\n        List<FieldState>\
+    \ backwardDiagonal = new ArrayList<>();\n        List<List<FieldState>> fieldStateGrid\
+    \ = grid.getFieldStateGrid();\n        int gridSize = fieldStateGrid.size();\n\
+    \n        // extract diagonals\n        for (int i = 0, j = gridSize-1;\n    \
+    \         i < gridSize;\n             i++, j--\n        ) {\n            forwardDiagonal.add(fieldStateGrid.get(i).get(i));\n\
+    \            backwardDiagonal.add(fieldStateGrid.get(i).get(j));\n        }\n\
+    \        \n        if (EnumSet.copyOf(forwardDiagonal).size() == 1) {\n      \
+    \      winningDiagonals.add(forwardDiagonal);\n        }\n\n        if (EnumSet.copyOf(backwardDiagonal).size()\
+    \ == 1) {\n            winningDiagonals.add(backwardDiagonal);\n        }\n  \
+    \      \n        return winningDiagonals;\n    }\n\n    private boolean hasImpossibleState()\
+    \ {\n        long xCount = getCountByFieldState(FieldState.X);\n        long oCount\
+    \ = getCountByFieldState(FieldState.O);\n        long diff = xCount > oCount ?\
+    \ xCount - oCount : oCount - xCount;\n\n        return diff >= 2 ||\n        \
+    \        winningRowsResult.size() > 1 ||\n                winningColumnsResult.size()\
+    \ > 1 ||\n                winningDiagonalsResult.size() > 1;\n    }\n\n    private\
+    \ boolean isDraw() {\n        boolean hasNoEmptyCells = !hasEmptyCells();\n  \
+    \      boolean hasNoWinners = hasNoWinners();\n\n        return hasNoEmptyCells\
+    \ && hasNoWinners;\n\n    }\n\n    private boolean hasEmptyCells() {\n       \
+    \ return getCountByFieldState(FieldState.EMPTY) > 0;\n    }\n\n    private boolean\
+    \ hasNoWinners() {\n        return winningRowsResult.isEmpty() && winningColumnsResult.isEmpty()\
+    \ && winningDiagonalsResult.isEmpty();\n    }\n\n    private boolean isGameInProgress()\
+    \ {\n        return hasEmptyCells() && hasNoWinners();\n    }\n\n    private long\
+    \ getCountByFieldState(FieldState state) {\n        return grid\n            \
+    \    .getFieldsString()\n                .chars()\n                .filter(ch\
+    \ -> ch == state.symbol)\n                .count();\n    }\n}\n"
+  learner_created: true
+- name: src/tictactoe/GridState.java
+  visible: true
+  text: |
+    package tictactoe;
+
+    public enum GridState {
+        X_WINS("X wins", true, FieldState.X),
+        O_WINS("O wins", true, FieldState.O),
+        DRAW("Draw", true, null),
+        IMPOSSIBLE("Impossible", true, null),
+        GAME_NOT_FINISHED("Game not finished", false, FieldState.EMPTY);
+
+        String message;
+        boolean finished;
+        FieldState relatedFieldState;
+
+        GridState(String message, boolean finished, FieldState relatedFieldState) {
+            this.message = message;
+            this.finished = finished;
+            this.relatedFieldState = relatedFieldState;
+        }
+
+        public static GridState getGridStateByFieldState(FieldState fieldState) {
+            for (GridState state : values()) {
+                if (state.relatedFieldState == fieldState) {
+                    return state;
+                }
+            }
+            return null;
+        }
+    }
+  learner_created: true
+- name: src/tictactoe/FieldState.java
+  visible: true
+  text: |
+    package tictactoe;
+
+    public enum FieldState {
+        O('O'),
+        X('X'),
+        EMPTY('_');
+
+        char symbol;
+
+        FieldState(char symbol) {
+            this.symbol = symbol;
+        }
+
+        public static FieldState findBySymbol(char symbol) {
+            for (FieldState state : values()) {
+                if (state.symbol == symbol) {
+                    return state;
+                }
+            }
+            return null;
+        }
+    }
+  learner_created: true
+feedback_link: https://hyperskill.org/projects/48/stages/258/implement#comment
+status: Solved
+feedback:
+  message: Congratulations!
+  time: Wed, 04 Aug 2021 16:17:43 UTC
+record: 4
